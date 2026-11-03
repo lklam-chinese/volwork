@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>義務工作寫作思維與結構工作坊</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+  
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: linear-gradient(135deg, #eef2f3 0%, #8e9eab 100%);
+    min-height: 100vh;
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  }
+
+  .drag-item {
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .drag-item:active {
+    cursor: grabbing;
+    transform: scale(1.03) rotate(1deg);
+  }
+
+  .drag-item.dragging {
+    opacity: 0.4;
+    transform: scale(0.95);
+  }
+
+  .drop-box.drag-over {
+    background-color: #e0f2fe !important;
+    border-color: #0284c7 !important;
+    transform: scale(1.01);
+  }
+
+  .correct-card {
+    background-color: #dcfce7 !important;
+    border-color: #22c55e !important;
+    color: #15803d !important;
+  }
+
+  .wrong-card {
+    background-color: #fee2e2 !important;
+    border-color: #ef4444 !important;
+    color: #b91c1c !important;
+  }
+
+  .combo-badge {
+    animation: bouncePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes bouncePop {
+    0% { transform: scale(0); }
+    70% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+    50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.8); }
+  }
+
+  .level-up-glow {
+    animation: pulseGlow 1.5s infinite;
+  }
+</style>
+</head>
+<body class="py-6 px-3 sm:px-6">
+
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <!-- 頂部遊戲化狀態列 (Header / Gamification Bar) -->
+  <header class="glass-card rounded-2xl p-4 sm:p-6 sticky top-2 z-40 shadow-lg transition-all border-b-4 border-blue-500">
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+      
+      <!-- 等級與稱號 -->
+      <div class="flex items-center gap-3">
+        <div id="levelAvatar" class="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-2xl flex items-center justify-center text-white text-2xl shadow-md font-extrabold">
+          🌱
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="levelTitle" class="font-bold text-lg text-slate-800">Lv.1 初級義工小幫手</span>
+            <span id="comboBadge" class="hidden combo-badge bg-amber-500 text-white text-xs font-black px-2 py-0.5 rounded-full shadow">
+              🔥 Combo <span id="comboCount">1</span>x
+            </span>
+          </div>
+          <p class="text-xs text-slate-500">完成挑戰獲得 XP 經驗值，晉升寫作大師！</p>
+        </div>
+      </div>
+
+      <!-- 經驗值條 -->
+      <div class="w-full sm:w-64 space-y-1">
+        <div class="flex justify-between text-xs font-semibold text-slate-600">
+          <span>XP 經驗值</span>
+          <span id="xpText">0 / 1000</span>
+        </div>
+        <div class="w-full bg-slate-200 h-3.5 rounded-full overflow-hidden p-0.5 shadow-inner">
+          <div id="xpBar" class="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-500 w-0"></div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- 大標題 -->
+  <div class="text-center py-2">
+    <h1 class="text-2xl sm:text-3xl font-black text-slate-800 tracking-wide drop-shadow-sm">
+      🌟 義務工作寫作思維與結構工作坊
+    </h1>
+  </div>
+
+  <!-- 第一部分：寫作目的 MC -->
+  <section class="glass-card rounded-2xl p-5 sm:p-8 space-y-4 border-l-8 border-amber-400">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+        <span class="bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg text-sm font-black">第 1 關</span>
+        先回答寫作目的（選擇正確答案）
+      </h2>
+      <span class="text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">+100 XP</span>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 pt-2" id="mcGroup">
+      <button class="mc-opt w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition font-medium text-slate-700" data-ans="wrong">
+        A. 介紹老人院的日常設施
+      </button>
+      <button class="mc-opt w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition font-medium text-slate-700" data-ans="right">
+        B. 說明活動對同學的好處，並鼓勵同學參與活動
+      </button>
+      <button class="mc-opt w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition font-medium text-slate-700" data-ans="wrong">
+        C. 講述郊野公園的歷史
+      </button>
+      <button class="mc-opt w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition font-medium text-slate-700" data-ans="wrong">
+        D. 投訴義務工作十分辛苦
+      </button>
+    </div>
+
+    <div id="mcFeedback" class="hidden p-4 rounded-xl text-sm font-semibold transition-all"></div>
+
+    <div class="text-right">
+      <button id="nextDragBtn" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition transform hover:-translate-y-0.5 active:translate-y-0">
+        解鎖分類練習 🚀
+      </button>
+    </div>
+  </section>
+
+  <!-- 第二部分：拖拉分類 -->
+  <section id="dragSection" class="hidden glass-card rounded-2xl p-5 sm:p-8 space-y-6 border-l-8 border-blue-500">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+        <span class="bg-blue-100 text-blue-800 px-2.5 py-1 rounded-lg text-sm font-black">第 2 關</span>
+        資料分段整合練習
+      </h2>
+      <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">+300 XP</span>
+    </div>
+
+    <p class="text-sm text-slate-600">
+      要更深入，更有依據闡述「活動的好處」，如何把以下資料整合較理想？請將下方選項拖放至對應段落。
+    </p>
+
+    <!-- 待分配選項庫 -->
+    <div class="bg-slate-100/80 p-4 rounded-xl border-2 border-dashed border-slate-300 min-h-[120px] drop-box" id="sourcePool">
+      <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 text-center">可拖拉資料庫</h3>
+      <div class="flex flex-wrap gap-2 justify-center" id="poolItems">
+        <div class="drag-item bg-white shadow-sm border border-slate-300 rounded-lg px-4 py-2 text-sm font-medium text-slate-800 hover:shadow-md" draggable="true" data-group="visit" data-type="content">探訪老人院</div>
+        <div class="drag-item bg-white shadow-sm border border-slate-300 rounded-lg px-4 py-2 text-sm font-medium text-slate-800 hover:shadow-md" draggable="true" data-group="clean" data-type="content">清潔郊野公園</div>
+        <div class="drag-item bg-white shadow-sm border border-slate-300 rounded-lg px-4 py-2 text-sm font-medium text-slate-800 hover:shadow-md" draggable="true" data-group="visit" data-type="content">與長者聊天、玩遊戲</div>
+        <div class="drag-item bg-white shadow-sm border border-slate-300 rounded-lg px-4 py-2 text-sm font-medium text-slate-800 hover:shadow-md" draggable="true" data-group="clean" data-type="content">分組清潔指定範圍及設施</div>
+        <div class="drag-item bg-white shadow-sm border border-slate-300 rounded-lg px-4 py-2 text-sm font-medium text-slate-800 hover:shadow-md" draggable="true" data-group="visit" data-type="concern">長者難相處</div>
+        <div class="drag-item bg-white shadow-sm border border-slate-300 rounded-lg px-4 py-2 text-sm font-medium text-slate-800 hover:shadow-md" draggable="true" data-group="clean" data-type="concern">清潔工作勞累</div>
+        <div class="drag-item bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2 text-sm font-bold text-indigo-700 hover:shadow-md" draggable="true" data-group="both" data-type="feeling" data-id="gain1">✨ 獲益良多</div>
+        <div class="drag-item bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2 text-sm font-bold text-indigo-700 hover:shadow-md" draggable="true" data-group="both" data-type="feeling" data-id="gain2">✨ 獲益良多</div>
+      </div>
+    </div>
+
+    <!-- 兩個分段容器 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="box drop-box bg-white/80 border-2 border-blue-200 rounded-xl p-4 min-h-[220px] flex flex-col transition" id="groupVisit">
+        <h3 class="text-base font-bold text-blue-800 border-b pb-2 mb-3 text-center">第 2 段</h3>
+        <div class="item-container flex flex-col gap-2 flex-grow"></div>
+      </div>
+
+      <div class="box drop-box bg-white/80 border-2 border-emerald-200 rounded-xl p-4 min-h-[220px] flex flex-col transition" id="groupPark">
+        <h3 class="text-base font-bold text-emerald-800 border-b pb-2 mb-3 text-center">第 3 段</h3>
+        <div class="item-container flex flex-col gap-2 flex-grow"></div>
+      </div>
+    </div>
+
+    <!-- 按鈕組 -->
+    <div class="flex justify-center gap-3 pt-2">
+      <button id="checkBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition transform hover:-translate-y-0.5">
+        ✅ 核對答案
+      </button>
+      <button id="resetBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold px-5 py-2.5 rounded-xl shadow transition">
+        🔄 重新開始
+      </button>
+    </div>
+
+    <!-- 基礎思考提示 -->
+    <div id="thinkHint" class="hidden bg-blue-50 border-2 border-blue-200 rounded-xl p-4 text-slate-700 text-sm leading-relaxed">
+      <h3 class="font-bold text-blue-900 mb-1 flex items-center gap-2">
+        💡 進一步思考
+      </h3>
+      <p>先寫活動內容、同學認為的疑慮，及如何按活動特質為同學釋除疑慮。</p>
+    </div>
+
+    <!-- 分段策略思考 MC -->
+    <div id="strategyMC" class="hidden bg-amber-50/80 border-2 border-amber-200 rounded-xl p-5 space-y-4">
+      <h3 class="text-base font-bold text-amber-900 flex items-center gap-2">
+        🤔 寫作策略思考：哪種寫法最能釋除同學的疑慮？
+      </h3>
+      <p class="text-sm text-slate-700">若要回應「長者難相處」的擔心，以下哪一種闡述方式效果最好？</p>
+
+      <div class="grid grid-cols-1 gap-2.5">
+        <div class="mc-opt strategy-opt p-3.5 rounded-lg border border-slate-200 bg-white hover:border-amber-400 hover:bg-amber-50 transition text-sm cursor-pointer" data-ans="right" data-opt-id="1">
+          探訪老人院時，透過傾談同玩遊戲輕鬆互動，放下拘束，自然消除陌生感，減少長者與我們相處的不安。
+        </div>
+        <div class="mc-opt strategy-opt p-3.5 rounded-lg border border-slate-200 bg-white hover:border-amber-400 hover:bg-amber-50 transition text-sm cursor-pointer" data-ans="wrong" data-opt-id="2">
+          長者其實很友善、一點都不難相處，他們都很健談，大家一定能相處融洽，同學不用過度擔心。
+        </div>
+        <div class="mc-opt strategy-opt p-3.5 rounded-lg border border-slate-200 bg-white hover:border-amber-400 hover:bg-amber-50 transition text-sm cursor-pointer" data-ans="wrong" data-opt-id="3">
+          義務活動最後一定獲益良多，我們應該尊重長者，沒有長者難相處這問題。
+        </div>
+      </div>
+
+      <div id="strategyFeedback" class="hidden p-4 rounded-xl text-sm font-semibold leading-relaxed"></div>
+      
+      <div class="text-right pt-2">
+        <button id="unlockSandboxBtn" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition transform hover:-translate-y-0.5">
+          解鎖寫作沙盤演練 📝 🚀
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 第三部分：沙盤演練與示範對照 (預設隱藏，完成第2關分段練習後才顯示) -->
+  <section id="sandboxSection" class="hidden glass-card rounded-2xl p-5 sm:p-8 space-y-6 border-l-8 border-emerald-500">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl sm:text-2xl font-black text-slate-800 flex items-center gap-2">
+        <span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg text-sm font-black">第 3 關</span>
+        📝 寫作沙盤演練與範例
+      </h2>
+      <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">+300 XP</span>
+    </div>
+    <p class="text-xs sm:text-sm text-slate-500">鞏固寫作架構：活動 ➔ 內容 ➔ 疑慮 ➔ 回應 ➔ 獲益良多 ➔ 小結</p>
+
+    <!-- 探訪老人院 6 部分示範 -->
+    <div class="bg-slate-50 border-2 border-slate-200 rounded-xl p-4 sm:p-5 space-y-3">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b pb-3">
+        <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+          💡 範例對照：「探訪老人院」6 個部分結構示範
+        </h3>
+        <button id="loadSampleBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition">
+          📥 載入範例至寫作演練
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+        <div class="bg-white p-3 rounded-lg border border-slate-200">
+          <span class="font-bold text-indigo-600">① 活動：</span>探訪老人院
+        </div>
+        <div class="bg-white p-3 rounded-lg border border-slate-200">
+          <span class="font-bold text-indigo-600">② 內容：</span>與長者傾談交流、表演精彩節目及進行輕鬆小遊戲
+        </div>
+        <div class="bg-white p-3 rounded-lg border border-slate-200">
+          <span class="font-bold text-indigo-600">③ 疑慮：</span>擔心長者性格較古怪且難以溝通相處
+        </div>
+        <div class="bg-white p-3 rounded-lg border border-slate-200">
+          <span class="font-bold text-indigo-600">④ 回應：</span>透過趣味遊戲與溫馨關懷打破隔閡，長者其實非常熱情友善
+        </div>
+        <div class="bg-white p-3 rounded-lg border border-slate-200">
+          <span class="font-bold text-indigo-600">⑤ 獲益良多：</span>學習關懷長者的溝通技巧，體會「老吾老以及人之老」的心情，培養同理心
+        </div>
+        <div class="bg-white p-3 rounded-lg border border-slate-200">
+          <span class="font-bold text-indigo-600">⑥ 小結：</span>一同為長者送上滿滿的溫暖與關懷！
+        </div>
+      </div>
+    </div>
+
+    <!-- 清潔郊野公園 沙盤演練表單 -->
+    <div class="bg-emerald-50/60 border-2 border-emerald-200 rounded-xl p-4 sm:p-6 space-y-4">
+      <h3 class="font-bold text-emerald-900 text-center text-base sm:text-lg">
+        🛠️ 實戰演練：請完成「清潔郊野公園」6 個部分構思
+      </h3>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs sm:text-sm">
+        <div class="space-y-1">
+          <label class="font-bold text-emerald-900 block">① 活動：</label>
+          <input type="text" id="sb1" value="清潔郊野公園" class="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white">
+        </div>
+        <div class="space-y-1">
+          <label class="font-bold text-emerald-900 block">② 內容：</label>
+          <input type="text" id="sb2" placeholder="請輸入內容" class="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white">
+        </div>
+        <div class="space-y-1">
+          <label class="font-bold text-emerald-900 block">③ 疑慮：</label>
+          <input type="text" id="sb3" placeholder="請輸入疑慮" class="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white">
+        </div>
+        <div class="space-y-1">
+          <label class="font-bold text-emerald-900 block">④ 回應/釋除疑慮：</label>
+          <input type="text" id="sb4" placeholder="請輸入回應" class="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white">
+        </div>
+        <div class="space-y-1">
+          <label class="font-bold text-emerald-900 block">⑤ 獲益良多指什麼：</label>
+          <input type="text" id="sb5" placeholder="請輸入獲益良多之處" class="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white">
+        </div>
+        <div class="space-y-1">
+          <label class="font-bold text-emerald-900 block">⑥ 小結：</label>
+          <input type="text" id="sb6" placeholder="請輸入小結" class="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white">
+        </div>
+      </div>
+
+      <div class="text-center pt-2">
+        <button id="generateParagraphBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg transition transform hover:-translate-y-0.5">
+          ✨ 生成完整段落 (+300 XP)
+        </button>
+      </div>
+
+      <!-- 段落預覽區域（含打字效果） -->
+      <div id="paragraphResult" class="hidden bg-white p-5 rounded-xl border-2 border-emerald-300 shadow-inner space-y-2">
+        <h4 class="font-bold text-emerald-800 text-sm flex items-center gap-2">
+          📖 組合段落生成：
+        </h4>
+        <p id="paragraphText" class="text-slate-800 text-sm leading-relaxed indent-8 font-medium min-h-[60px]"></p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- 簡化版 Web Audio 音效產生器 -->
+<script>
+class SoundManager {
+  constructor() {
+    this.ctx = null;
+  }
+
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+
+  playPop() {
+    this.init();
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.1);
+  }
+
+  playSuccess() {
+    this.init();
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+    notes.forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime + i * 0.08);
+      gain.gain.setValueAtTime(0.2, this.ctx.currentTime + i * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + i * 0.08 + 0.25);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(this.ctx.currentTime + i * 0.08);
+      osc.stop(this.ctx.currentTime + i * 0.08 + 0.25);
+    });
+  }
+
+  playError() {
+    this.init();
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(120, this.ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.2);
+  }
+}
+
+const sounds = new SoundManager();
+</script>
+
+<!-- 主程式邏輯 -->
+<script>
+// ========== 遊戲化狀態系統 (XP & Combo) ==========
+let currentXP = 0;
+let currentCombo = 0;
+let level = 1;
+
+function addXP(amount) {
+  if (currentCombo > 1) {
+    amount = Math.round(amount * (1 + currentCombo * 0.15));
+  }
+  currentXP += amount;
+  
+  // 更新等級
+  let newLevel = 1;
+  let levelName = "Lv.1 初級義工小幫手";
+  let avatar = "🌱";
+
+  if (currentXP >= 800) {
+    newLevel = 3;
+    levelName = "Lv.3 寫作策略大師 👑";
+    avatar = "🎓";
+  } else if (currentXP >= 300) {
+    newLevel = 2;
+    levelName = "Lv.2 義工策劃達人 ✨";
+    avatar = "⭐";
+  }
+
+  if (newLevel > level) {
+    level = newLevel;
+    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+    sounds.playSuccess();
+  }
+
+  document.getElementById('levelTitle').textContent = levelName;
+  document.getElementById('levelAvatar').textContent = avatar;
+  document.getElementById('xpText').textContent = `${currentXP} / 1000`;
+  document.getElementById('xpBar').style.width = `${Math.min(100, (currentXP / 1000) * 100)}%`;
+}
+
+function incCombo() {
+  currentCombo++;
+  const badge = document.getElementById('comboBadge');
+  document.getElementById('comboCount').textContent = currentCombo;
+  if (currentCombo >= 2) {
+    badge.classList.remove('hidden');
+  }
+}
+
+function resetCombo() {
+  currentCombo = 0;
+  document.getElementById('comboBadge').classList.add('hidden');
+}
+
+// ========== 第一部分：寫作目的 MC ==========
+const mcOpts = document.querySelectorAll('#mcGroup .mc-opt');
+const mcFeedback = document.getElementById('mcFeedback');
+const nextDragBtn = document.getElementById('nextDragBtn');
+const dragSection = document.getElementById('dragSection');
+let mcDone = false;
+
+mcOpts.forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (mcDone) return;
+    mcDone = true;
+
+    mcOpts.forEach(b => {
+      b.classList.remove('hover:border-blue-400', 'hover:bg-blue-50/50');
+      if (b.dataset.ans === 'right') {
+        b.classList.add('correct-card', 'font-bold');
+      } else {
+        b.classList.add('wrong-card');
+      }
+    });
+
+    mcFeedback.classList.remove('hidden');
+    if (btn.dataset.ans === 'right') {
+      sounds.playSuccess();
+      incCombo();
+      addXP(100);
+      mcFeedback.className = "p-4 rounded-xl text-sm font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300";
+      mcFeedback.textContent = "🎉 完全正確！活動旨在向同學展示義工服務帶來的正面收益，激發報名熱情！";
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+    } else {
+      sounds.playError();
+      resetCombo();
+      mcFeedback.className = "p-4 rounded-xl text-sm font-semibold bg-red-100 text-red-800 border border-red-300";
+      mcFeedback.textContent = "❌ 答錯囉！提示：這是一份宣傳招募文件，主要目的是吸引同學加入。正確答案是 B。";
+    }
+
+    nextDragBtn.classList.remove('hidden');
+  });
+});
+
+nextDragBtn.onclick = () => {
+  dragSection.classList.remove('hidden');
+  dragSection.scrollIntoView({ behavior: 'smooth' });
+  initDragAndDrop();
+};
+
+// ========== 第二部分：雙重拖拉核心 ==========
+let draggedEl = null;
+
+function initDragAndDrop() {
+  const items = document.querySelectorAll('.drag-item');
+  const dropBoxes = document.querySelectorAll('.drop-box');
+
+  items.forEach(item => {
+    // HTML5 Drag Events
+    item.addEventListener('dragstart', e => {
+      draggedEl = item;
+      item.classList.add('dragging');
+      sounds.playPop();
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      draggedEl = null;
+      dropBoxes.forEach(b => b.classList.remove('drag-over'));
+    });
+
+    // Touch Polyfill for Mobile Devices
+    let offsetX = 0, offsetY = 0;
+    item.addEventListener('touchstart', e => {
+      draggedEl = item;
+      const touch = e.touches[0];
+      const rect = item.getBoundingClientRect();
+      offsetX = touch.clientX - rect.left;
+      offsetY = touch.clientY - rect.top;
+      item.style.position = 'fixed';
+      item.style.zIndex = '1000';
+      item.style.width = rect.width + 'px';
+      item.style.left = (touch.clientX - offsetX) + 'px';
+      item.style.top = (touch.clientY - offsetY) + 'px';
+      sounds.playPop();
+    }, { passive: false });
+
+    item.addEventListener('touchmove', e => {
+      if (!draggedEl) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      item.style.left = (touch.clientX - offsetX) + 'px';
+      item.style.top = (touch.clientY - offsetY) + 'px';
+    }, { passive: false });
+
+    item.addEventListener('touchend', e => {
+      if (!draggedEl) return;
+      item.style.position = '';
+      item.style.zIndex = '';
+      item.style.width = '';
+      item.style.left = '';
+      item.style.top = '';
+
+      const touch = e.changedTouches[0];
+      const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+      const zone = targetEl ? targetEl.closest('.drop-box') : null;
+
+      if (zone) {
+        if (zone.id === 'sourcePool') {
+          document.getElementById('poolItems').appendChild(item);
+        } else {
+          zone.querySelector('.item-container').appendChild(item);
+        }
+      } else {
+        document.getElementById('poolItems').appendChild(item);
+      }
+      draggedEl = null;
+    });
+  });
+
+  dropBoxes.forEach(box => {
+    box.addEventListener('dragover', e => {
+      e.preventDefault();
+      box.classList.add('drag-over');
+    });
+
+    box.addEventListener('dragleave', e => {
+      box.classList.remove('drag-over');
+    });
+
+    box.addEventListener('drop', e => {
+      e.preventDefault();
+      box.classList.remove('drag-over');
+      if (draggedEl) {
+        if (box.id === 'sourcePool') {
+          document.getElementById('poolItems').appendChild(draggedEl);
+        } else {
+          box.querySelector('.item-container').appendChild(draggedEl);
+        }
+      }
+    });
+  });
+}
+
+// ========== 核對答案 ==========
+let dragChecked = false;
+
+document.getElementById('checkBtn').onclick = () => {
+  const visitBox = document.getElementById('groupVisit');
+  const parkBox = document.getElementById('groupPark');
+
+  const visitItems = Array.from(visitBox.querySelectorAll('.drag-item'));
+  const parkItems = Array.from(parkBox.querySelectorAll('.drag-item'));
+
+  let allCorrect = true;
+
+  // 驗證第 2 段
+  visitItems.forEach(item => {
+    item.classList.remove('correct-card', 'wrong-card');
+    if (item.dataset.group === 'visit' || item.dataset.group === 'both') {
+      item.classList.add('correct-card');
+    } else {
+      item.classList.add('wrong-card');
+      allCorrect = false;
+    }
+  });
+
+  // 驗證第 3 段
+  parkItems.forEach(item => {
+    item.classList.remove('correct-card', 'wrong-card');
+    if (item.dataset.group === 'clean' || item.dataset.group === 'both') {
+      item.classList.add('correct-card');
+    } else {
+      item.classList.add('wrong-card');
+      allCorrect = false;
+    }
+  });
+
+  // 驗證兩段均包含「獲益良多」
+  const visitHasGain = visitItems.some(i => i.dataset.type === 'feeling');
+  const parkHasGain = parkItems.some(i => i.dataset.type === 'feeling');
+
+  document.getElementById('thinkHint').classList.remove('hidden');
+
+  if (visitHasGain && parkHasGain && allCorrect && visitItems.length === 4 && parkItems.length === 4) {
+    if (!dragChecked) {
+      dragChecked = true;
+      sounds.playSuccess();
+      incCombo();
+      addXP(300);
+      confetti({ particleCount: 80, spread: 80, origin: { y: 0.6 } });
+    }
+    document.getElementById('strategyMC').classList.remove('hidden');
+    document.getElementById('strategyMC').scrollIntoView({ behavior: 'smooth' });
+  } else {
+    sounds.playError();
+    resetCombo();
+    // 即使未全對，若已有基本分類也開啓策略題作學習引導
+    if (visitItems.length > 0 || parkItems.length > 0) {
+      document.getElementById('strategyMC').classList.remove('hidden');
+    }
+  }
+};
+
+// ========== 策略論證 MC 互動與解鎖第3關 ==========
+const strategyOpts = document.querySelectorAll('.strategy-opt');
+const strategyFeedback = document.getElementById('strategyFeedback');
+const unlockSandboxBtn = document.getElementById('unlockSandboxBtn');
+const sandboxSection = document.getElementById('sandboxSection');
+let strategyDone = false;
+
+strategyOpts.forEach(opt => {
+  opt.onclick = () => {
+    if (strategyDone) return;
+    strategyDone = true;
+
+    strategyOpts.forEach(o => {
+      if (o.dataset.ans === 'right') {
+        o.classList.add('correct-card', 'font-bold');
+      } else {
+        o.classList.add('wrong-card');
+      }
+    });
+
+    strategyFeedback.classList.remove('hidden');
+    const optId = opt.dataset.optId;
+
+    if (optId === '1') {
+      sounds.playSuccess();
+      incCombo();
+      addXP(200);
+      strategyFeedback.className = "p-4 rounded-xl text-sm font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300";
+      strategyFeedback.textContent = "✅ 非常好！你懂得用具體的活動內容作為理據，不是空泛地說服，而是讓同學透過活動細節明白，疑慮可以透過活動安排自然化解，這樣的寫法說服力最強！";
+      confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+    } else if (optId === '2') {
+      sounds.playError();
+      resetCombo();
+      strategyFeedback.className = "p-4 rounded-xl text-sm font-semibold bg-red-100 text-red-800 border border-red-300";
+      strategyFeedback.textContent = "❌ 這個寫法的問題在於只有結論、沒有實質理據。只說「長者不難相處」卻不解釋原因，說服力十分薄弱。";
+    } else {
+      sounds.playError();
+      resetCombo();
+      strategyFeedback.className = "p-4 rounded-xl text-sm font-semibold bg-red-100 text-red-800 border border-red-300";
+      strategyFeedback.textContent = "❌ 這個寫法的問題在於迴避了核心疑慮。如果不正視「長者難相處」的擔心，只強調參加的好處，難以真正達到鼓勵參與的效果。";
+    }
+
+    // 完成分段與策略思考後，顯示解鎖第3關的按鈕
+    unlockSandboxBtn.classList.remove('hidden');
+  };
+});
+
+unlockSandboxBtn.onclick = () => {
+  sandboxSection.classList.remove('hidden');
+  sandboxSection.scrollIntoView({ behavior: 'smooth' });
+};
+
+// ========== 沙盤演練與示範邏輯（修訂增潤版） ==========
+document.getElementById('loadSampleBtn').onclick = () => {
+  sounds.playPop();
+  document.getElementById('sb1').value = '探訪老人院';
+  document.getElementById('sb2').value = '與長者傾談交流、表演精彩節目及進行輕鬆小遊戲';
+  document.getElementById('sb3').value = '擔心長者性格較古怪且難以溝通相處';
+  document.getElementById('sb4').value = '透過趣味遊戲與溫馨關懷打破隔閡，長者其實非常熱情友善';
+  document.getElementById('sb5').value = '學習關懷長者的溝通技巧，體會「老吾老以及人之老」的心情，培養同理心';
+  document.getElementById('sb6').value = '一同為長者送上滿滿的溫暖與關懷！';
+};
+
+let sandboxXPClaimed = false;
+
+document.getElementById('generateParagraphBtn').onclick = () => {
+  const act = document.getElementById('sb1').value.trim() || '義務活動';
+  const content = document.getElementById('sb2').value.trim() || '進行各項義工服務工作';
+  const concern = document.getElementById('sb3').value.trim() || '過程可能會過於辛苦或難以適應';
+  const response = document.getElementById('sb4').value.trim() || '只要大家同心協力、互相支持，便能順利完成';
+  const gain = document.getElementById('sb5').value.trim() || '學習關懷他人的技巧，並培養團隊合作精神';
+  const summary = document.getElementById('sb6').value.trim() || '踴躍報名參與，共同為社會獻上一份溫暖！';
+
+  // 修訂：加入溫暖親切的開場、四字詞增潤，增強文章銜接，增潤至約 250 字
+  const fullText = `親愛的同學們：在這次充滿意義的「${act}」活動中，我們將會齊心協力，${content}。或許有部分同學心中會存有些許疑慮，坦言${concern}。但請大家放寬心，因為${response}，屆時所有疑難自會迎刃而解！參與這項活動絕對能讓大家獲益良多——我們不僅能${gain}，更能收穫滿滿的成就感與珍貴情誼。這無疑是一次難能可貴的成長體驗！期待大家攜手同行，踴躍報名，${summary}`;
+
+  const resultContainer = document.getElementById('paragraphResult');
+  const targetP = document.getElementById('paragraphText');
+
+  resultContainer.classList.remove('hidden');
+  targetP.textContent = '';
+
+  sounds.playSuccess();
+
+  // 打字效果呈現
+  let index = 0;
+  const timer = setInterval(() => {
+    if (index < fullText.length) {
+      targetP.textContent += fullText.charAt(index);
+      index++;
+    } else {
+      clearInterval(timer);
+      if (!sandboxXPClaimed) {
+        sandboxXPClaimed = true;
+        addXP(300);
+        confetti({ particleCount: 100, spread: 90, origin: { y: 0.5 } });
+      }
+    }
+  }, 25);
+};
+
+// ========== 重新開始 ==========
+document.getElementById('resetBtn').onclick = () => {
+  sounds.playPop();
+  const poolContainer = document.getElementById('poolItems');
+
+  document.querySelectorAll('.drag-item').forEach(item => {
+    item.classList.remove('correct-card', 'wrong-card');
+    poolContainer.appendChild(item);
+  });
+
+  document.getElementById('thinkHint').classList.add('hidden');
+  document.getElementById('strategyMC').classList.add('hidden');
+  unlockSandboxBtn.classList.add('hidden');
+  sandboxSection.classList.add('hidden');
+  strategyDone = false;
+  strategyOpts.forEach(o => o.classList.remove('correct-card', 'wrong-card', 'font-bold'));
+  strategyFeedback.classList.add('hidden');
+};
+</script>
+
+</body>
+</html>
